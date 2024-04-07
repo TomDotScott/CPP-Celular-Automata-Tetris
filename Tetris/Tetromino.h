@@ -13,7 +13,10 @@ public:
 	const sf::Uint32* GetBuffer() const { return m_buffer; }
 
 	const sf::Vector2i& GetPosition() const { return m_position; }
-	void SetPosition(const sf::Vector2i& position) { m_position = position; }
+
+	void MoveLeft(const int amount);
+	void MoveRight(int amount);
+	void MoveDown(int amount);
 
 protected:
 	sf::Uint32* m_buffer = nullptr;
@@ -65,7 +68,7 @@ public:
 private:
 	SPRITE
 	{
-		0x00008BFF, 0x00000000, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0x00000000,
 		0x00008BFF, 0x00008BFF, 0x00008BFF, 0x00008BFF
 	};
 };
