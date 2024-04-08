@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include <vector>
 #include <SFML/Window/Event.hpp>
 
 #include "Tetromino.h"
@@ -9,13 +8,15 @@ static constexpr unsigned SCREEN_HEIGHT = 600;
 
 static constexpr int GRID_SIZE = 10;
 
+#define DEBUG_MOVEMENT 0
 
 class Game
 {
 public:
 	Game();
 	~Game();
-	void HandleInputs() const;
+	void HandleInputs();
+
 	void Update();
 	void Render(uint8_t* pixels) const;
 
@@ -23,9 +24,19 @@ public:
 private:
 	int m_nextID;
 	Tetromino* m_currentTetromino;
+	sf::Uint32 m_gameGrid[SCREEN_HEIGHT / GRID_SIZE][SCREEN_WIDTH / GRID_SIZE];
 
-	std::vector<Tetromino*> m_blocks;
+	bool m_shouldMoveLeft;
+	bool m_shouldMoveRight;
 
 	void BlitPixels(uint8_t* pixels) const;
 	Tetromino* GenerateTetromino();
+	void RemoveCurrentTetrominoFromGrid();
+	void AddTetrominoToGrid();
+	bool CanTetrominoMove();
+	bool MoveTetromino();
+
+#if DEBUG_MOVEMENT
+	void PrintGrid() const;
+#endif
 };

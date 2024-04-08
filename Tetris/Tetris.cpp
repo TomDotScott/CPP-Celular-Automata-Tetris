@@ -35,7 +35,7 @@ int main()
 
 		Keyboard::Update();
 
-		if (++updateCounter == 6)
+		if (++updateCounter == 4)
 		{
 			game.HandleInputs();
 			game.Update();
