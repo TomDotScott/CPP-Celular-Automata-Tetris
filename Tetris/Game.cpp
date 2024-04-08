@@ -3,6 +3,8 @@
 #include <iostream>
 #include <random>
 
+#include "Keyboard.h"
+
 Game::Game() :
 	m_nextID(0),
 	m_currentTetromino(nullptr)
@@ -18,24 +20,21 @@ Game::~Game()
 	}
 }
 
-void Game::HandleInputs(const sf::Event keyBoardEvent) const
+void Game::HandleInputs() const
 {
 	if(!m_currentTetromino)
 	{
 		return;
 	}
 
-	if (keyBoardEvent.type == sf::Event::KeyReleased)
+	if (Keyboard::IsButtonDown(sf::Keyboard::Key::Left))
 	{
-		if (keyBoardEvent.key.code == sf::Keyboard::Key::Left)
-		{
-			m_currentTetromino->MoveLeft(GRID_SIZE);
-		}
+		m_currentTetromino->MoveLeft(GRID_SIZE);
+	}
 
-		if (keyBoardEvent.key.code == sf::Keyboard::Key::Right)
-		{
-			m_currentTetromino->MoveRight(GRID_SIZE);
-		}
+	if (Keyboard::IsButtonDown(sf::Keyboard::Key::Right))
+	{
+		m_currentTetromino->MoveRight(GRID_SIZE);
 	}
 }
 

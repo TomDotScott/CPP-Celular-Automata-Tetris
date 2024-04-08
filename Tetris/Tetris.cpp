@@ -3,12 +3,13 @@
 #include <SFML/Graphics.hpp>
 
 #include "Game.h"
+#include "Keyboard.h"
 #include "Tetromino.h"
 
 int main()
 {
 	sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "Cellular Automata Tetris");
-	window.setFramerateLimit(10);
+	window.setFramerateLimit(60);
 
 	auto* pixels = new sf::Uint8[static_cast<size_t>(SCREEN_WIDTH) * static_cast<size_t>(SCREEN_HEIGHT) * 4];
 
@@ -19,6 +20,7 @@ int main()
 
 	Game game;
 
+	int updateCounter = 0;
 
 	while (window.isOpen())
 	{
@@ -29,15 +31,16 @@ int main()
 			{
 				window.close();
 			}
-
-			if(event.type == sf::Event::KeyPressed || event.type == sf::Event::KeyReleased)
-			{
-				game.HandleInputs(event);
-			}
 		}
 
-		game.Update();
-		
+		Keyboard::Update();
+
+		if (++updateCounter == 6)
+		{
+			game.HandleInputs();
+			game.Update();
+			updateCounter = 0;
+		}
 
 		window.clear(sf::Color::Black);
 

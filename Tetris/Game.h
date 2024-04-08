@@ -15,7 +15,7 @@ class Game
 public:
 	Game();
 	~Game();
-	void HandleInputs(sf::Event keyBoardEvent) const;
+	void HandleInputs() const;
 	void Update();
 	void Render(uint8_t* pixels) const;
 
