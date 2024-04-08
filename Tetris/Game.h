@@ -17,7 +17,7 @@ public:
 	~Game();
 	void HandleInputs();
 
-	void Update();
+	void Update(float deltaTime);
 	void Render(uint8_t* pixels) const;
 
 	static int RandomMultiple(int multiple, int max);
@@ -28,12 +28,19 @@ private:
 
 	bool m_shouldMoveLeft;
 	bool m_shouldMoveRight;
+	bool m_shouldRotate;
+	bool m_shouldSpeedUp;
+
+	float m_movementTimer;
 
 	void BlitPixels(uint8_t* pixels) const;
 	Tetromino* GenerateTetromino();
 	void RemoveCurrentTetrominoFromGrid();
 	void AddTetrominoToGrid();
-	bool CanTetrominoMove();
+	bool CanTetrominoMoveIntoSpace(const sf::Vector2i& newPosition) const;
+	bool CanTetrominoMoveDown() const;
+	bool CanTetrominoMoveLeft() const;
+	bool CanTetrominoMoveRight() const;
 	bool MoveTetromino();
 
 #if DEBUG_MOVEMENT

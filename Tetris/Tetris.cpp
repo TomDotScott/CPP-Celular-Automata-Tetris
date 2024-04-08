@@ -18,9 +18,10 @@ int main()
 
 	sf::Sprite sprite(texture);
 
+	sf::Clock clock;
+
 	Game game;
 
-	int updateCounter = 0;
 
 	while (window.isOpen())
 	{
@@ -35,12 +36,11 @@ int main()
 
 		Keyboard::Update();
 
-		if (++updateCounter == 4)
-		{
-			game.HandleInputs();
-			game.Update();
-			updateCounter = 0;
-		}
+		game.HandleInputs();
+
+		game.Update(clock.getElapsedTime().asSeconds());
+
+		clock.restart();
 
 		window.clear(sf::Color::Black);
 

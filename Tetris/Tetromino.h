@@ -5,21 +5,47 @@
 class Tetromino
 {
 public:
-	static constexpr unsigned TETROMINO_PIXEL_WIDTH = 4;
-	static constexpr unsigned TETROMINO_PIXEL_HEIGHT = 2;
+	class Rotation
+	{
+	public:
+		Rotation(sf::Uint32* shape, int width, int height);
+		~Rotation();
 
-	#define SPRITE sf::Uint32 m_shape[TETROMINO_PIXEL_WIDTH * TETROMINO_PIXEL_HEIGHT]
+		int GetWidth() const { return m_width; }
+		int GetHeight() const { return m_height; }
+		const sf::Uint32* GetBuffer() const { return m_buffer; }
 
-	const sf::Uint32* GetBuffer() const { return m_buffer; }
+	private:
+		sf::Uint32* m_buffer;
+		const int m_width;
+		const int m_height;
+	};
+
+	enum class eRotation
+	{
+		// TODO: Do they need values? Might be useful
+		e_up = 0,
+		e_left = 90,
+		e_down = 180,
+		e_right = 270
+	};
+
+	Tetromino();
+
+	const Rotation* GetShape() const { return m_currentShape; }
 
 	const sf::Vector2i& GetPosition() const { return m_position; }
 
-	void MoveLeft(const int amount);
+	void MoveLeft(int amount);
 	void MoveRight(int amount);
 	void MoveDown(int amount);
 
+	virtual void Rotate();
+
 protected:
-	sf::Uint32* m_buffer = nullptr;
+	Rotation* m_currentShape = nullptr;
+
+	eRotation m_currentRotation;
 
 private:
 	sf::Vector2i m_position;
@@ -28,111 +54,80 @@ private:
 class LBlock final : public Tetromino
 {
 public:
-	LBlock()
-	{
-		m_buffer = m_shape;
-	}
+	LBlock();
+	void Rotate() override;
 
 private:
-	SPRITE
-	{
-		0x00000000, 0x00000000, 0x00000000, 0xFFA500FF,
-		0xFFA500FF, 0xFFA500FF, 0xFFA500FF, 0xFFA500FF
-	};
+	Rotation m_upRotation;
+	Rotation m_leftRotation;
+	Rotation m_downRotation;
+	Rotation m_rightRotation;
 };
 
 class JBlock final : public Tetromino
 {
 public:
-	JBlock()
-	{
-		m_buffer = m_shape;
-	}
+	JBlock();
+	void Rotate() override;
 
 private:
-	SPRITE
-	{
-		0xADD8E6FF, 0x00000000, 0x00000000, 0x00000000,
-		0xADD8E6FF, 0xADD8E6FF, 0xADD8E6FF, 0xADD8E6FF
-	};
+	Rotation m_upRotation;
+	Rotation m_leftRotation;
+	Rotation m_downRotation;
+	Rotation m_rightRotation;
 };
 
 class IBlock final : public Tetromino
 {
 public:
-	IBlock()
-	{
-		m_buffer = m_shape;
-	}
+	IBlock();
+	void Rotate() override;
 
 private:
-	SPRITE
-	{
-		0x00000000, 0x00000000, 0x00000000, 0x00000000,
-		0x00008BFF, 0x00008BFF, 0x00008BFF, 0x00008BFF
-	};
+	Rotation m_upRotation;
+	Rotation m_leftRotation;
 };
 
 class OBlock final : public Tetromino
 {
 public:
-	OBlock()
-	{
-		m_buffer = m_shape;
-	}
+	OBlock();
 
 private:
-	SPRITE
-	{
-		0xFFFF00FF, 0xFFFF00FF, 0x00000000, 0x00000000,
-		0xFFFF00FF, 0xFFFF00FF, 0x00000000, 0x00000000
-	};
+	Rotation m_upRotation;
 };
 
 class SBlock final : public Tetromino
 {
 public:
-	SBlock()
-	{
-		m_buffer = m_shape;
-	}
+	SBlock();
+	void Rotate() override;
 
 private:
-	SPRITE
-	{
-		0x00000000, 0x90EE90FF, 0x90EE90FF, 0x00000000,
-		0x90EE90FF, 0x90EE90FF, 0x00000000, 0x00000000
-	};
+	Rotation m_upRotation;
+	Rotation m_leftRotation;
 };
 
 class TBlock final : public Tetromino
 {
 public:
-	TBlock()
-	{
-		m_buffer = m_shape;
-	}
+	TBlock();
+	void Rotate() override;
 
 private:
-	SPRITE
-	{
-		0x00000000, 0xFF00FFFF, 0x00000000, 0x00000000,
-		0xFF00FFFF, 0xFF00FFFF, 0xFF00FFFF, 0x00000000
-	};
+	Rotation m_upRotation;
+	Rotation m_leftRotation;
+	Rotation m_downRotation;
+	Rotation m_rightRotation;
 };
 
 class ZBlock final : public Tetromino
 {
 public:
-	ZBlock()
-	{
-		m_buffer = m_shape;
-	}
+	ZBlock();
+	void Rotate() override;
 
 private:
-	SPRITE
-	{
-		0xBF0000FF, 0xBF0000FF, 0x00000000, 0x00000000,
-		0x00000000, 0xBF0000FF, 0xBF0000FF, 0x00000000
-	};
+	Rotation m_upRotation;
+	Rotation m_leftRotation;
 };

@@ -5,12 +5,18 @@
 
 #include "Keyboard.h"
 
+// TODO: Shouldn't be constant, should change over time... Until I think of an elegant way it is staying as a constexpr
+static constexpr float MOVEMENT_TIME = 15 / 60.f;
+
 Game::Game() :
 	m_nextID(5),
 	m_currentTetromino(nullptr),
 	m_gameGrid{ },
 	m_shouldMoveLeft(false),
-	m_shouldMoveRight(false)
+	m_shouldMoveRight(false),
+	m_shouldRotate(false),
+	m_shouldSpeedUp(false),
+	m_movementTimer(0.f)
 {
 	m_currentTetromino = GenerateTetromino();
 }
@@ -29,6 +35,8 @@ void Game::HandleInputs()
 
 	m_shouldMoveLeft = Keyboard::IsButtonDown(sf::Keyboard::Key::Left);
 	m_shouldMoveRight = Keyboard::IsButtonDown(sf::Keyboard::Key::Right);
+	m_shouldRotate = Keyboard::IsButtonReleased(sf::Keyboard::Key::Up);
+	m_shouldSpeedUp = Keyboard::IsButtonDown(sf::Keyboard::Key::Down);
 }
 
 #if DEBUG_MOVEMENT
@@ -54,17 +62,40 @@ void Game::PrintGrid() const
 #endif
 
 
-void Game::Update()
+void Game::Update(const float deltaTime)
 {
 	if (!m_currentTetromino)
 	{
 		m_currentTetromino = GenerateTetromino();
 	}
 
-	if (!MoveTetromino())
+	float multiplier = 1.f;
+
+	if(m_shouldSpeedUp)
 	{
-		delete m_currentTetromino;
-		m_currentTetromino = GenerateTetromino();
+		multiplier = 4.f;
+	}
+
+	m_movementTimer += deltaTime * multiplier;
+
+	if (m_shouldRotate /*&& CanTetrominoRotate()*/)
+	{
+		RemoveCurrentTetrominoFromGrid();
+
+		m_currentTetromino->Rotate();
+
+		AddTetrominoToGrid();
+	}
+
+	if (m_movementTimer > MOVEMENT_TIME)
+	{
+		if (!MoveTetromino())
+		{
+			delete m_currentTetromino;
+			m_currentTetromino = GenerateTetromino();
+		}
+
+		m_movementTimer = 0.f;
 	}
 }
 
@@ -154,11 +185,13 @@ void Game::RemoveCurrentTetrominoFromGrid()
 {
 	const sf::Vector2i gridPosition = m_currentTetromino->GetPosition() / GRID_SIZE;
 
-	for (int blockY = 0; blockY < 2; ++blockY)
+	const Tetromino::Rotation* currentRotation = m_currentTetromino->GetShape();
+
+	for (int blockY = 0; blockY < currentRotation->GetHeight(); ++blockY)
 	{
-		for (int blockX = 0; blockX < 4; ++blockX)
+		for (int blockX = 0; blockX < currentRotation->GetWidth(); ++blockX)
 		{
-			if (m_currentTetromino->GetBuffer()[blockY * 4 + blockX] & 0xFFFFFFFF && (gridPosition.y + blockY < SCREEN_HEIGHT / GRID_SIZE && gridPosition.x + blockX < SCREEN_WIDTH / GRID_SIZE))
+			if (currentRotation->GetBuffer()[blockY * currentRotation->GetWidth() + blockX] & 0xFFFFFFFF && (gridPosition.y + blockY < SCREEN_HEIGHT / GRID_SIZE && gridPosition.x + blockX < SCREEN_WIDTH / GRID_SIZE))
 			{
 				m_gameGrid[gridPosition.y + blockY][gridPosition.x + blockX] = 0;
 			}
@@ -168,15 +201,16 @@ void Game::RemoveCurrentTetrominoFromGrid()
 
 void Game::AddTetrominoToGrid()
 {
-	const sf::Uint32* buffer = m_currentTetromino->GetBuffer();
+	const Tetromino::Rotation* rotation = m_currentTetromino->GetShape();
+	const sf::Uint32* buffer = rotation->GetBuffer();
 
 	const sf::Vector2i gridPosition = m_currentTetromino->GetPosition() / GRID_SIZE;
 
-	for (int blockY = 0; blockY < 2; ++blockY)
+	for (int blockY = 0; blockY < rotation->GetHeight(); ++blockY)
 	{
-		for (int blockX = 0; blockX < 4; ++blockX)
+		for (int blockX = 0; blockX < rotation->GetWidth(); ++blockX)
 		{
-			const sf::Uint32 block = buffer[blockY * 4 + blockX];
+			const sf::Uint32 block = buffer[blockY * rotation->GetWidth() + blockX];
 
 			if (block > 0 && (gridPosition.y + blockY < SCREEN_HEIGHT / GRID_SIZE && gridPosition.x + blockX < SCREEN_WIDTH / GRID_SIZE))
 			{
@@ -186,39 +220,25 @@ void Game::AddTetrominoToGrid()
 	}
 }
 
-bool Game::CanTetrominoMove()
+bool Game::CanTetrominoMoveIntoSpace(const sf::Vector2i& newPosition) const
 {
-	const sf::Uint32* buffer = m_currentTetromino->GetBuffer();
+	const Tetromino::Rotation* rotation = m_currentTetromino->GetShape();
+	const sf::Uint32* buffer = rotation->GetBuffer();
 
-	sf::Vector2i nextGridPosition;
-
-	if (m_shouldMoveLeft)
+	for (int blockY = 0; blockY < rotation->GetHeight(); ++blockY)
 	{
-		nextGridPosition = (m_currentTetromino->GetPosition() + sf::Vector2i(-GRID_SIZE, GRID_SIZE)) / GRID_SIZE;
-	}
-	else if(m_shouldMoveRight)
-	{
-		nextGridPosition = (m_currentTetromino->GetPosition() + sf::Vector2i(GRID_SIZE, GRID_SIZE)) / GRID_SIZE;
-	}
-	else
-	{
-		nextGridPosition = (m_currentTetromino->GetPosition() + sf::Vector2i(0, GRID_SIZE)) / GRID_SIZE;
-	}
-
-	for (int blockY = 0; blockY < 2; ++blockY)
-	{
-		for (int blockX = 0; blockX < 4; ++blockX)
+		for (int blockX = 0; blockX < rotation->GetWidth(); ++blockX)
 		{
-			const sf::Uint32 block = buffer[blockY * 4 + blockX];
+			const sf::Uint32 block = buffer[blockY * rotation->GetWidth() + blockX];
 
 			if (!(block & 0xFF))
 			{
 				continue;
 			}
 
-			if (nextGridPosition.y + blockY < SCREEN_HEIGHT / GRID_SIZE && nextGridPosition.x + blockX < SCREEN_WIDTH / GRID_SIZE)
+			if (newPosition.y + blockY < SCREEN_HEIGHT / GRID_SIZE && newPosition.x + blockX < SCREEN_WIDTH / GRID_SIZE)
 			{
-				if (m_gameGrid[nextGridPosition.y + blockY][nextGridPosition.x + blockX] & 0xFF)
+				if (m_gameGrid[newPosition.y + blockY][newPosition.x + blockX] & 0xFF)
 				{
 					return false;
 				}
@@ -229,9 +249,24 @@ bool Game::CanTetrominoMove()
 	return true;
 }
 
+bool Game::CanTetrominoMoveDown() const
+{
+	return CanTetrominoMoveIntoSpace((m_currentTetromino->GetPosition() + sf::Vector2i(0, GRID_SIZE)) / GRID_SIZE);
+}
+
+bool Game::CanTetrominoMoveLeft() const
+{
+	return CanTetrominoMoveIntoSpace((m_currentTetromino->GetPosition() + sf::Vector2i(-GRID_SIZE, 0)) / GRID_SIZE);
+}
+
+bool Game::CanTetrominoMoveRight() const
+{
+	return CanTetrominoMoveIntoSpace((m_currentTetromino->GetPosition() + sf::Vector2i(GRID_SIZE, 0)) / GRID_SIZE);
+}
+
 bool Game::MoveTetromino()
 {
-	if(m_currentTetromino == nullptr)
+	if (m_currentTetromino == nullptr)
 	{
 		return false;
 	}
@@ -250,20 +285,20 @@ bool Game::MoveTetromino()
 
 	RemoveCurrentTetrominoFromGrid();
 
-	if (!CanTetrominoMove())
-	{
-		AddTetrominoToGrid();
-		return false;
-	}
-
-	if (m_shouldMoveLeft)
+	if (m_shouldMoveLeft && CanTetrominoMoveLeft())
 	{
 		m_currentTetromino->MoveLeft(GRID_SIZE);
 	}
 
-	if(m_shouldMoveRight)
+	if (m_shouldMoveRight && CanTetrominoMoveRight())
 	{
 		m_currentTetromino->MoveRight(GRID_SIZE);
+	}
+
+	if (!CanTetrominoMoveDown())
+	{
+		AddTetrominoToGrid();
+		return false;
 	}
 
 	m_currentTetromino->MoveDown(GRID_SIZE);
