@@ -6,7 +6,8 @@
 static constexpr unsigned SCREEN_WIDTH = 800;
 static constexpr unsigned SCREEN_HEIGHT = 600;
 
-static constexpr int GRID_SIZE = 25;
+static constexpr int CELL_SIZE = 2;
+static constexpr int BLOCK_SIZE = 8;
 
 #define DEBUG_MOVEMENT 0
 
@@ -24,7 +25,7 @@ public:
 private:
 	int m_nextID;
 	Tetromino* m_currentTetromino;
-	sf::Uint32 m_gameGrid[SCREEN_HEIGHT / GRID_SIZE][SCREEN_WIDTH / GRID_SIZE];
+	sf::Uint32 m_gameGrid[SCREEN_HEIGHT / CELL_SIZE][SCREEN_WIDTH / CELL_SIZE];
 
 	bool m_shouldMoveLeft;
 	bool m_shouldMoveRight;

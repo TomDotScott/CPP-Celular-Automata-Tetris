@@ -6,7 +6,7 @@
 #include "Keyboard.h"
 
 // TODO: Shouldn't be constant, should change over time... Until I think of an elegant way it is staying as a constexpr
-static constexpr float MOVEMENT_TIME = 15 / 60.f;
+static constexpr float MOVEMENT_TIME = 1 / 60.f;
 
 Game::Game() :
 	m_nextID(5),
@@ -42,9 +42,9 @@ void Game::HandleInputs()
 #if DEBUG_MOVEMENT
 void Game::PrintGrid() const
 {
-	for (int gridY = 0; gridY < SCREEN_HEIGHT / GRID_SIZE; ++gridY)
+	for (int gridY = 0; gridY < SCREEN_HEIGHT / CELL_SIZE; ++gridY)
 	{
-		for (int gridX = 0; gridX < SCREEN_WIDTH / GRID_SIZE; ++gridX)
+		for (int gridX = 0; gridX < SCREEN_WIDTH / CELL_SIZE; ++gridX)
 		{
 			if (m_gameGrid[gridY][gridX] > 0)
 			{
@@ -69,12 +69,12 @@ void Game::Update(const float deltaTime)
 		RemoveCurrentTetrominoFromGrid();
 	}
 
-	sf::Uint32 nextGrid[SCREEN_HEIGHT / GRID_SIZE][SCREEN_WIDTH / GRID_SIZE]{};
+	sf::Uint32 nextGrid[SCREEN_HEIGHT / CELL_SIZE][SCREEN_WIDTH / CELL_SIZE]{};
 
 	// Update the automata
-	for (int gridY = 0; gridY < SCREEN_HEIGHT / GRID_SIZE; ++gridY)
+	for (int gridY = 0; gridY < SCREEN_HEIGHT / CELL_SIZE; ++gridY)
 	{
-		for (int gridX = 0; gridX < SCREEN_WIDTH / GRID_SIZE; ++gridX)
+		for (int gridX = 0; gridX < SCREEN_WIDTH / CELL_SIZE; ++gridX)
 		{
 			const uint32_t color = m_gameGrid[gridY][gridX];
 
@@ -84,11 +84,11 @@ void Game::Update(const float deltaTime)
 				const uint32_t left  = m_gameGrid[gridY + 1][gridX - 1];
 				const uint32_t right = m_gameGrid[gridY + 1][gridX + 1];
 
-				if (gridY == SCREEN_HEIGHT / GRID_SIZE - 1)
+				if (gridY == SCREEN_HEIGHT / CELL_SIZE - 1)
 				{
 					nextGrid[gridY][gridX] = color;
 				}
-				else if (gridY < SCREEN_HEIGHT / GRID_SIZE - 1 && below == 0)
+				else if (gridY < SCREEN_HEIGHT / CELL_SIZE - 1 && below == 0)
 				{
 					nextGrid[gridY + 1][gridX] = color;
 				}
@@ -96,7 +96,7 @@ void Game::Update(const float deltaTime)
 				{
 					nextGrid[gridY][gridX - 1] = color;
 				}
-				else if(gridX < SCREEN_WIDTH / GRID_SIZE - 1 && right == 0)
+				else if(gridX < SCREEN_WIDTH / CELL_SIZE - 1 && right == 0)
 				{
 					nextGrid[gridY][gridX + 1] = color;
 				}
@@ -108,7 +108,7 @@ void Game::Update(const float deltaTime)
 		}
 	}
 
-	memcpy(m_gameGrid, nextGrid, SCREEN_HEIGHT / GRID_SIZE * SCREEN_WIDTH / GRID_SIZE * sizeof(uint32_t));
+	memcpy(m_gameGrid, nextGrid, SCREEN_HEIGHT / CELL_SIZE * SCREEN_WIDTH / CELL_SIZE * sizeof(uint32_t));
 
 	if (m_currentTetromino)
 	{
@@ -166,9 +166,9 @@ int Game::RandomMultiple(const int multiple, const int max)
 
 void Game::BlitPixels(uint8_t* pixels) const
 {
-	for (int gridY = 0; gridY < SCREEN_HEIGHT / GRID_SIZE; ++gridY)
+	for (int gridY = 0; gridY < SCREEN_HEIGHT / CELL_SIZE; ++gridY)
 	{
-		for (int gridX = 0; gridX < SCREEN_WIDTH / GRID_SIZE; ++gridX)
+		for (int gridX = 0; gridX < SCREEN_WIDTH / CELL_SIZE; ++gridX)
 		{
 			const uint32_t color = m_gameGrid[gridY][gridX];
 			if (color > 0)
@@ -179,12 +179,12 @@ void Game::BlitPixels(uint8_t* pixels) const
 				const uint8_t blue = color >> 4 & 0xFF;
 				const uint8_t alpha = color & 0xFF;
 
-				const int pixelsIndex = (gridY * GRID_SIZE * SCREEN_WIDTH + gridX * GRID_SIZE) * 4;
+				const int pixelsIndex = (gridY * CELL_SIZE * SCREEN_WIDTH + gridX * CELL_SIZE) * 4;
 
 				// Blit the color to the pixels array for each pixel in the block
-				for (int y = 0; y < GRID_SIZE; ++y)
+				for (int y = 0; y < CELL_SIZE; ++y)
 				{
-					for (int x = 0; x < GRID_SIZE; ++x)
+					for (int x = 0; x < CELL_SIZE; ++x)
 					{
 						const int pixelIndex = pixelsIndex + (y * SCREEN_WIDTH + x) * 4;
 						pixels[pixelIndex] = red;
@@ -234,7 +234,7 @@ Tetromino* Game::GenerateTetromino()
 
 void Game::RemoveCurrentTetrominoFromGrid()
 {
-	const sf::Vector2i gridPosition = m_currentTetromino->GetPosition() / GRID_SIZE;
+	const sf::Vector2i gridPosition = m_currentTetromino->GetPosition() / CELL_SIZE;
 
 	const Tetromino::Rotation* currentRotation = m_currentTetromino->GetShape();
 
@@ -242,9 +242,16 @@ void Game::RemoveCurrentTetrominoFromGrid()
 	{
 		for (int blockX = 0; blockX < currentRotation->GetWidth(); ++blockX)
 		{
-			if (currentRotation->GetBuffer()[blockY * currentRotation->GetWidth() + blockX] & 0xFFFFFFFF && (gridPosition.y + blockY < SCREEN_HEIGHT / GRID_SIZE && gridPosition.x + blockX < SCREEN_WIDTH / GRID_SIZE))
+			if (currentRotation->GetBuffer()[blockY * currentRotation->GetWidth() + blockX] & 0xFFFFFFFF && (gridPosition.y + blockY < SCREEN_HEIGHT / CELL_SIZE && gridPosition.x + blockX < SCREEN_WIDTH / CELL_SIZE))
 			{
-				m_gameGrid[gridPosition.y + blockY][gridPosition.x + blockX] = 0;
+				// Adjust for block size
+				for (int pixelY = 0; pixelY < BLOCK_SIZE; ++pixelY)
+				{
+					for (int pixelX = 0; pixelX < BLOCK_SIZE; ++pixelX)
+					{
+						m_gameGrid[gridPosition.y + blockY * BLOCK_SIZE + pixelY][gridPosition.x + blockX * BLOCK_SIZE + pixelX] = 0;
+					}
+				}
 			}
 		}
 	}
@@ -255,7 +262,7 @@ void Game::AddTetrominoToGrid()
 	const Tetromino::Rotation* rotation = m_currentTetromino->GetShape();
 	const sf::Uint32* buffer = rotation->GetBuffer();
 
-	const sf::Vector2i gridPosition = m_currentTetromino->GetPosition() / GRID_SIZE;
+	const sf::Vector2i gridPosition = m_currentTetromino->GetPosition() / CELL_SIZE;
 
 	for (int blockY = 0; blockY < rotation->GetHeight(); ++blockY)
 	{
@@ -263,9 +270,16 @@ void Game::AddTetrominoToGrid()
 		{
 			const sf::Uint32 block = buffer[blockY * rotation->GetWidth() + blockX];
 
-			if (block > 0 && (gridPosition.y + blockY < SCREEN_HEIGHT / GRID_SIZE && gridPosition.x + blockX < SCREEN_WIDTH / GRID_SIZE))
+			if (block > 0 && (gridPosition.y + blockY < SCREEN_HEIGHT / CELL_SIZE && gridPosition.x + blockX < SCREEN_WIDTH / CELL_SIZE))
 			{
-				m_gameGrid[gridPosition.y + blockY][gridPosition.x + blockX] = block;
+				// Adjust for block size
+				for (int pixelY = 0; pixelY < BLOCK_SIZE; ++pixelY)
+				{
+					for (int pixelX = 0; pixelX < BLOCK_SIZE; ++pixelX)
+					{
+						m_gameGrid[gridPosition.y + blockY * BLOCK_SIZE + pixelY][gridPosition.x + blockX * BLOCK_SIZE + pixelX] = block;
+					}
+				}
 			}
 		}
 	}
@@ -287,11 +301,17 @@ bool Game::CanTetrominoMoveIntoSpace(const sf::Vector2i& newPosition) const
 				continue;
 			}
 
-			if (newPosition.y + blockY < SCREEN_HEIGHT / GRID_SIZE && newPosition.x + blockX < SCREEN_WIDTH / GRID_SIZE)
+			if (newPosition.y + blockY * BLOCK_SIZE < SCREEN_HEIGHT / CELL_SIZE && newPosition.x + blockX < SCREEN_WIDTH / CELL_SIZE)
 			{
-				if (m_gameGrid[newPosition.y + blockY][newPosition.x + blockX] & 0xFF)
+				for (int pixelY = 0; pixelY < BLOCK_SIZE; ++pixelY)
 				{
-					return false;
+					for (int pixelX = 0; pixelX < BLOCK_SIZE; ++pixelX)
+					{
+						if (m_gameGrid[newPosition.y + blockY * BLOCK_SIZE + pixelY][newPosition.x + blockX * BLOCK_SIZE + pixelX] & 0xFF)
+						{
+							return false;
+						}
+					}
 				}
 			}
 		}
@@ -302,17 +322,17 @@ bool Game::CanTetrominoMoveIntoSpace(const sf::Vector2i& newPosition) const
 
 bool Game::CanTetrominoMoveDown() const
 {
-	return CanTetrominoMoveIntoSpace((m_currentTetromino->GetPosition() + sf::Vector2i(0, GRID_SIZE)) / GRID_SIZE);
+	return CanTetrominoMoveIntoSpace((m_currentTetromino->GetPosition() + sf::Vector2i(0, CELL_SIZE)) / CELL_SIZE);
 }
 
 bool Game::CanTetrominoMoveLeft() const
 {
-	return CanTetrominoMoveIntoSpace((m_currentTetromino->GetPosition() + sf::Vector2i(-GRID_SIZE, 0)) / GRID_SIZE);
+	return CanTetrominoMoveIntoSpace((m_currentTetromino->GetPosition() + sf::Vector2i(-CELL_SIZE, 0)) / CELL_SIZE);
 }
 
 bool Game::CanTetrominoMoveRight() const
 {
-	return CanTetrominoMoveIntoSpace((m_currentTetromino->GetPosition() + sf::Vector2i(GRID_SIZE, 0)) / GRID_SIZE);
+	return CanTetrominoMoveIntoSpace((m_currentTetromino->GetPosition() + sf::Vector2i(CELL_SIZE, 0)) / CELL_SIZE);
 }
 
 bool Game::MoveTetromino()
@@ -322,7 +342,7 @@ bool Game::MoveTetromino()
 		return false;
 	}
 
-	const bool bottomOfScreen = m_currentTetromino->GetPosition().y > SCREEN_HEIGHT - GRID_SIZE * 3;
+	const bool bottomOfScreen = m_currentTetromino->GetPosition().y > SCREEN_HEIGHT - CELL_SIZE * 3;
 
 	if (bottomOfScreen)
 	{
@@ -338,12 +358,12 @@ bool Game::MoveTetromino()
 
 	if (m_shouldMoveLeft && CanTetrominoMoveLeft())
 	{
-		m_currentTetromino->MoveLeft(GRID_SIZE);
+		m_currentTetromino->MoveLeft(CELL_SIZE);
 	}
 
 	if (m_shouldMoveRight && CanTetrominoMoveRight())
 	{
-		m_currentTetromino->MoveRight(GRID_SIZE);
+		m_currentTetromino->MoveRight(CELL_SIZE);
 	}
 
 	if (!CanTetrominoMoveDown())
@@ -352,7 +372,7 @@ bool Game::MoveTetromino()
 		return false;
 	}
 
-	m_currentTetromino->MoveDown(GRID_SIZE);
+	m_currentTetromino->MoveDown(CELL_SIZE);
 
 	AddTetrominoToGrid();
 
