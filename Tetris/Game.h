@@ -6,7 +6,7 @@
 static constexpr unsigned SCREEN_WIDTH = 800;
 static constexpr unsigned SCREEN_HEIGHT = 600;
 
-static constexpr int GRID_SIZE = 10;
+static constexpr int GRID_SIZE = 25;
 
 #define DEBUG_MOVEMENT 0
 

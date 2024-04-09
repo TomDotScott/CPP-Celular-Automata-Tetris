@@ -7,7 +7,6 @@
 
 // TODO: Shouldn't be constant, should change over time... Until I think of an elegant way it is staying as a constexpr
 static constexpr float MOVEMENT_TIME = 15 / 60.f;
-static constexpr uint32_t AUTOMATA_COLOUR = 0xFFFFFFFF;
 
 Game::Game() :
 	m_nextID(5),
@@ -19,9 +18,7 @@ Game::Game() :
 	m_shouldSpeedUp(false),
 	m_movementTimer(0.f)
 {
-	// m_currentTetromino = GenerateTetromino();
-	m_gameGrid[0 ][40] = AUTOMATA_COLOUR;
-	m_gameGrid[30][40] = AUTOMATA_COLOUR;
+	m_currentTetromino = GenerateTetromino();
 }
 
 Game::~Game()
@@ -67,12 +64,10 @@ void Game::PrintGrid() const
 
 void Game::Update(const float deltaTime)
 {
-	if(RandomMultiple(10, 100) == 10)
+	if (m_currentTetromino)
 	{
-		m_gameGrid[0][40] = AUTOMATA_COLOUR;
+		RemoveCurrentTetrominoFromGrid();
 	}
-
-	static constexpr size_t ARRAY_SIZE = SCREEN_HEIGHT / GRID_SIZE * SCREEN_WIDTH / GRID_SIZE * sizeof(uint32_t);
 
 	sf::Uint32 nextGrid[SCREEN_HEIGHT / GRID_SIZE][SCREEN_WIDTH / GRID_SIZE]{};
 
@@ -83,7 +78,7 @@ void Game::Update(const float deltaTime)
 		{
 			const uint32_t color = m_gameGrid[gridY][gridX];
 
-			if (color == AUTOMATA_COLOUR)
+			if (color & 0xFF)
 			{
 				const uint32_t below = m_gameGrid[gridY + 1][gridX];
 				const uint32_t left  = m_gameGrid[gridY + 1][gridX - 1];
@@ -91,34 +86,37 @@ void Game::Update(const float deltaTime)
 
 				if (gridY == SCREEN_HEIGHT / GRID_SIZE - 1)
 				{
-					nextGrid[gridY][gridX] = AUTOMATA_COLOUR;
+					nextGrid[gridY][gridX] = color;
 				}
 				else if (gridY < SCREEN_HEIGHT / GRID_SIZE - 1 && below == 0)
 				{
-					nextGrid[gridY + 1][gridX] = AUTOMATA_COLOUR;
+					nextGrid[gridY + 1][gridX] = color;
 				}
 				else if(gridX > 0 && left == 0)
 				{
-					nextGrid[gridY][gridX - 1] = AUTOMATA_COLOUR;
+					nextGrid[gridY][gridX - 1] = color;
 				}
 				else if(gridX < SCREEN_WIDTH / GRID_SIZE - 1 && right == 0)
 				{
-					nextGrid[gridY][gridX + 1] = AUTOMATA_COLOUR;
+					nextGrid[gridY][gridX + 1] = color;
 				}
 				else
 				{
-					nextGrid[gridY][gridX] = AUTOMATA_COLOUR;
+					nextGrid[gridY][gridX] = color;
 				}
 			}
 		}
 	}
 
-	memcpy(m_gameGrid, nextGrid, ARRAY_SIZE);
+	memcpy(m_gameGrid, nextGrid, SCREEN_HEIGHT / GRID_SIZE * SCREEN_WIDTH / GRID_SIZE * sizeof(uint32_t));
 
-
-	if (!m_currentTetromino)
+	if (m_currentTetromino)
 	{
-		// m_currentTetromino = GenerateTetromino();
+		AddTetrominoToGrid();
+	}
+	else
+	{
+		m_currentTetromino = GenerateTetromino();
 		return;
 	}
 
