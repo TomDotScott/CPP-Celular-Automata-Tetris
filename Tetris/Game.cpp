@@ -7,6 +7,7 @@
 
 // TODO: Shouldn't be constant, should change over time... Until I think of an elegant way it is staying as a constexpr
 static constexpr float MOVEMENT_TIME = 15 / 60.f;
+static constexpr uint32_t AUTOMATA_COLOUR = 0xFFFFFFFF;
 
 Game::Game() :
 	m_nextID(5),
@@ -18,7 +19,9 @@ Game::Game() :
 	m_shouldSpeedUp(false),
 	m_movementTimer(0.f)
 {
-	m_currentTetromino = GenerateTetromino();
+	// m_currentTetromino = GenerateTetromino();
+	m_gameGrid[0 ][40] = AUTOMATA_COLOUR;
+	m_gameGrid[30][40] = AUTOMATA_COLOUR;
 }
 
 Game::~Game()
@@ -64,9 +67,59 @@ void Game::PrintGrid() const
 
 void Game::Update(const float deltaTime)
 {
+	if(RandomMultiple(10, 100) == 10)
+	{
+		m_gameGrid[0][40] = AUTOMATA_COLOUR;
+	}
+
+	static constexpr size_t ARRAY_SIZE = SCREEN_HEIGHT / GRID_SIZE * SCREEN_WIDTH / GRID_SIZE * sizeof(uint32_t);
+
+	sf::Uint32 nextGrid[SCREEN_HEIGHT / GRID_SIZE][SCREEN_WIDTH / GRID_SIZE]{};
+
+	// Update the automata
+	for (int gridY = 0; gridY < SCREEN_HEIGHT / GRID_SIZE; ++gridY)
+	{
+		for (int gridX = 0; gridX < SCREEN_WIDTH / GRID_SIZE; ++gridX)
+		{
+			const uint32_t color = m_gameGrid[gridY][gridX];
+
+			if (color == AUTOMATA_COLOUR)
+			{
+				const uint32_t below = m_gameGrid[gridY + 1][gridX];
+				const uint32_t left  = m_gameGrid[gridY + 1][gridX - 1];
+				const uint32_t right = m_gameGrid[gridY + 1][gridX + 1];
+
+				if (gridY == SCREEN_HEIGHT / GRID_SIZE - 1)
+				{
+					nextGrid[gridY][gridX] = AUTOMATA_COLOUR;
+				}
+				else if (gridY < SCREEN_HEIGHT / GRID_SIZE - 1 && below == 0)
+				{
+					nextGrid[gridY + 1][gridX] = AUTOMATA_COLOUR;
+				}
+				else if(gridX > 0 && left == 0)
+				{
+					nextGrid[gridY][gridX - 1] = AUTOMATA_COLOUR;
+				}
+				else if(gridX < SCREEN_WIDTH / GRID_SIZE - 1 && right == 0)
+				{
+					nextGrid[gridY][gridX + 1] = AUTOMATA_COLOUR;
+				}
+				else
+				{
+					nextGrid[gridY][gridX] = AUTOMATA_COLOUR;
+				}
+			}
+		}
+	}
+
+	memcpy(m_gameGrid, nextGrid, ARRAY_SIZE);
+
+
 	if (!m_currentTetromino)
 	{
-		m_currentTetromino = GenerateTetromino();
+		// m_currentTetromino = GenerateTetromino();
+		return;
 	}
 
 	float multiplier = 1.f;
