@@ -81,8 +81,22 @@ void Game::Update(const float deltaTime)
 			if (color & 0xFF)
 			{
 				const uint32_t below = m_gameGrid[gridY + 1][gridX];
-				const uint32_t left  = m_gameGrid[gridY + 1][gridX - 1];
-				const uint32_t right = m_gameGrid[gridY + 1][gridX + 1];
+
+				int direction = 1;
+				if(RandomMultiple(1, 10) <= 5)
+				{
+					direction = -direction;
+				}
+
+				uint32_t belowA = 0xFF;
+				uint32_t belowB = 0xFF;
+
+				if (gridX + direction >= 0 && gridX + direction < SCREEN_WIDTH / CELL_SIZE)
+				{
+					belowA = m_gameGrid[gridY + 1][gridX - direction];
+					belowB = m_gameGrid[gridY + 1][gridX + direction];
+				}
+
 
 				if (gridY == SCREEN_HEIGHT / CELL_SIZE - 1)
 				{
@@ -92,13 +106,13 @@ void Game::Update(const float deltaTime)
 				{
 					nextGrid[gridY + 1][gridX] = color;
 				}
-				else if(gridX > 0 && left == 0)
+				else if(gridX > 0 && belowA == 0)
 				{
-					nextGrid[gridY][gridX - 1] = color;
+					nextGrid[gridY + 1][gridX - direction] = color;
 				}
-				else if(gridX < SCREEN_WIDTH / CELL_SIZE - 1 && right == 0)
+				else if(gridX < SCREEN_WIDTH / CELL_SIZE - 1 && belowB == 0)
 				{
-					nextGrid[gridY][gridX + 1] = color;
+					nextGrid[gridY + 1][gridX + direction] = color;
 				}
 				else
 				{
