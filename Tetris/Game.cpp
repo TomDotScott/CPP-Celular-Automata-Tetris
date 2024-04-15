@@ -9,16 +9,15 @@
 static constexpr float MOVEMENT_TIME = 1 / 60.f;
 
 Game::Game() :
-	m_nextID(5),
-	m_currentTetromino(nullptr),
-	m_gameGrid{ },
+	m_nextID(0),
+	m_currentTetromino(GenerateTetromino()),
+	m_gameGrid(),
 	m_shouldMoveLeft(false),
 	m_shouldMoveRight(false),
 	m_shouldRotate(false),
 	m_shouldSpeedUp(false),
 	m_movementTimer(0.f)
 {
-	m_currentTetromino = GenerateTetromino();
 }
 
 Game::~Game()
@@ -42,7 +41,7 @@ void Game::HandleInputs()
 #if DEBUG_MOVEMENT
 void Game::PrintGrid() const
 {
-	for (int gridY = 0; gridY < SCREEN_HEIGHT / CELL_SIZE; ++gridY)
+	for (int gridY = 0; gridY < NUM_ROWS; ++gridY)
 	{
 		for (int gridX = 0; gridX < SCREEN_WIDTH / CELL_SIZE; ++gridX)
 		{
@@ -69,60 +68,7 @@ void Game::Update(const float deltaTime)
 		RemoveCurrentTetrominoFromGrid();
 	}
 
-	sf::Uint32 nextGrid[SCREEN_HEIGHT / CELL_SIZE][SCREEN_WIDTH / CELL_SIZE]{};
-
-	// Update the automata
-	for (int gridY = 0; gridY < SCREEN_HEIGHT / CELL_SIZE; ++gridY)
-	{
-		for (int gridX = 0; gridX < SCREEN_WIDTH / CELL_SIZE; ++gridX)
-		{
-			const uint32_t color = m_gameGrid[gridY][gridX];
-
-			if (color & 0xFF)
-			{
-				const uint32_t below = m_gameGrid[gridY + 1][gridX];
-
-				int direction = 1;
-				if(RandomMultiple(1, 10) <= 5)
-				{
-					direction = -direction;
-				}
-
-				uint32_t belowA = 0xFF;
-				uint32_t belowB = 0xFF;
-
-				if (gridX + direction >= 0 && gridX + direction < SCREEN_WIDTH / CELL_SIZE)
-				{
-					belowA = m_gameGrid[gridY + 1][gridX - direction];
-					belowB = m_gameGrid[gridY + 1][gridX + direction];
-				}
-
-
-				if (gridY == SCREEN_HEIGHT / CELL_SIZE - 1)
-				{
-					nextGrid[gridY][gridX] = color;
-				}
-				else if (gridY < SCREEN_HEIGHT / CELL_SIZE - 1 && below == 0)
-				{
-					nextGrid[gridY + 1][gridX] = color;
-				}
-				else if(gridX > 0 && belowA == 0)
-				{
-					nextGrid[gridY + 1][gridX - direction] = color;
-				}
-				else if(gridX < SCREEN_WIDTH / CELL_SIZE - 1 && belowB == 0)
-				{
-					nextGrid[gridY + 1][gridX + direction] = color;
-				}
-				else
-				{
-					nextGrid[gridY][gridX] = color;
-				}
-			}
-		}
-	}
-
-	memcpy(m_gameGrid, nextGrid, SCREEN_HEIGHT / CELL_SIZE * SCREEN_WIDTH / CELL_SIZE * sizeof(uint32_t));
+	UpdateAutomata();
 
 	if (m_currentTetromino)
 	{
@@ -136,7 +82,7 @@ void Game::Update(const float deltaTime)
 
 	float multiplier = 1.f;
 
-	if(m_shouldSpeedUp)
+	if (m_shouldSpeedUp)
 	{
 		multiplier = 4.f;
 	}
@@ -158,10 +104,13 @@ void Game::Update(const float deltaTime)
 		{
 			delete m_currentTetromino;
 			m_currentTetromino = GenerateTetromino();
+			m_gameGrid.CheckForCompletion();
 		}
 
 		m_movementTimer = 0.f;
 	}
+
+	m_gameGrid.CheckForCompletion();
 }
 
 void Game::Render(uint8_t* pixels) const
@@ -178,13 +127,71 @@ int Game::RandomMultiple(const int multiple, const int max)
 	return dist(gen) * multiple;
 }
 
+void Game::UpdateAutomata()
+{
+	std::array<std::array<uint32_t, NUM_COLS>, NUM_ROWS> nextGrid{};
+
+	// Update the automata
+	for (int gridY = 0; gridY < NUM_ROWS; ++gridY)
+	{
+		for (int gridX = 0; gridX < NUM_COLS; ++gridX)
+		{
+			const uint32_t color = m_gameGrid.GetValue(gridY, gridX);
+
+			if (color != INVALID_CELL && color & 0xFF)
+			{
+				const uint32_t below = m_gameGrid.GetValue(gridY + 1, gridX);
+
+				int direction = 1;
+				if (RandomMultiple(1, 10) <= 5)
+				{
+					direction = -direction;
+				}
+
+				uint32_t belowA = 0xFF;
+				uint32_t belowB = 0xFF;
+
+				if (gridX + direction >= 0 && gridX + direction < NUM_COLS)
+				{
+					belowA = m_gameGrid.GetValue(gridY + 1, gridX - direction);
+					belowB = m_gameGrid.GetValue(gridY + 1, gridX + direction);
+				}
+
+
+				if (gridY == NUM_ROWS - 1)
+				{
+					nextGrid[gridY][gridX] = color;
+				}
+				else if (gridY < NUM_ROWS - 1 && below == 0)
+				{
+					nextGrid[gridY + 1][gridX] = color;
+				}
+				else if (gridX > 0 && belowA == 0)
+				{
+					nextGrid[gridY + 1][gridX - direction] = color;
+				}
+				else if (gridX < NUM_COLS - 1 && belowB == 0)
+				{
+					nextGrid[gridY + 1][gridX + direction] = color;
+				}
+				else
+				{
+					nextGrid[gridY][gridX] = color;
+				}
+			}
+		}
+	}
+
+	m_gameGrid.SetNextState(nextGrid);
+}
+
 void Game::BlitPixels(uint8_t* pixels) const
 {
-	for (int gridY = 0; gridY < SCREEN_HEIGHT / CELL_SIZE; ++gridY)
+	for (int gridY = 0; gridY < NUM_ROWS; ++gridY)
 	{
-		for (int gridX = 0; gridX < SCREEN_WIDTH / CELL_SIZE; ++gridX)
+		for (int gridX = 0; gridX < NUM_COLS; ++gridX)
 		{
-			const uint32_t color = m_gameGrid[gridY][gridX];
+			const uint32_t color = m_gameGrid.GetValue(gridY, gridX);
 			if (color > 0)
 			{
 				// Extract color channels
@@ -256,14 +263,18 @@ void Game::RemoveCurrentTetrominoFromGrid()
 	{
 		for (int blockX = 0; blockX < currentRotation->GetWidth(); ++blockX)
 		{
-			if (currentRotation->GetBuffer()[blockY * currentRotation->GetWidth() + blockX] & 0xFFFFFFFF && (gridPosition.y + blockY < SCREEN_HEIGHT / CELL_SIZE && gridPosition.x + blockX < SCREEN_WIDTH / CELL_SIZE))
+			if (currentRotation->GetBuffer()[blockY * currentRotation->GetWidth() + blockX] & 0xFFFFFFFF &&
+				(gridPosition.y + blockY < NUM_ROWS && gridPosition.x + blockX < NUM_COLS))
 			{
 				// Adjust for block size
 				for (int pixelY = 0; pixelY < BLOCK_SIZE; ++pixelY)
 				{
 					for (int pixelX = 0; pixelX < BLOCK_SIZE; ++pixelX)
 					{
-						m_gameGrid[gridPosition.y + blockY * BLOCK_SIZE + pixelY][gridPosition.x + blockX * BLOCK_SIZE + pixelX] = 0;
+						m_gameGrid.ClearValue(
+							gridPosition.y + blockY * BLOCK_SIZE + pixelY,
+							gridPosition.x + blockX * BLOCK_SIZE + pixelX
+						);
 					}
 				}
 			}
@@ -284,14 +295,17 @@ void Game::AddTetrominoToGrid()
 		{
 			const sf::Uint32 block = buffer[blockY * rotation->GetWidth() + blockX];
 
-			if (block > 0 && (gridPosition.y + blockY < SCREEN_HEIGHT / CELL_SIZE && gridPosition.x + blockX < SCREEN_WIDTH / CELL_SIZE))
+			if (block > 0 && (gridPosition.y + blockY < NUM_ROWS && gridPosition.x + blockX < NUM_COLS))
 			{
 				// Adjust for block size
 				for (int pixelY = 0; pixelY < BLOCK_SIZE; ++pixelY)
 				{
 					for (int pixelX = 0; pixelX < BLOCK_SIZE; ++pixelX)
 					{
-						m_gameGrid[gridPosition.y + blockY * BLOCK_SIZE + pixelY][gridPosition.x + blockX * BLOCK_SIZE + pixelX] = block;
+						m_gameGrid.SetValue(gridPosition.y + blockY * BLOCK_SIZE + pixelY, 
+							gridPosition.x + blockX * BLOCK_SIZE + pixelX, 
+							block
+						);
 					}
 				}
 			}
@@ -301,6 +315,11 @@ void Game::AddTetrominoToGrid()
 
 bool Game::CanTetrominoMoveIntoSpace(const sf::Vector2i& newPosition) const
 {
+	if(newPosition.x < 0 || newPosition.x > NUM_COLS)
+	{
+		return false;
+	}
+
 	const Tetromino::Rotation* rotation = m_currentTetromino->GetShape();
 	const sf::Uint32* buffer = rotation->GetBuffer();
 
@@ -315,13 +334,18 @@ bool Game::CanTetrominoMoveIntoSpace(const sf::Vector2i& newPosition) const
 				continue;
 			}
 
-			if (newPosition.y + blockY * BLOCK_SIZE < SCREEN_HEIGHT / CELL_SIZE && newPosition.x + blockX < SCREEN_WIDTH / CELL_SIZE)
+			if (newPosition.y + blockY * BLOCK_SIZE < NUM_ROWS && newPosition.x + blockX < NUM_COLS)
 			{
 				for (int pixelY = 0; pixelY < BLOCK_SIZE; ++pixelY)
 				{
 					for (int pixelX = 0; pixelX < BLOCK_SIZE; ++pixelX)
 					{
-						if (m_gameGrid[newPosition.y + blockY * BLOCK_SIZE + pixelY][newPosition.x + blockX * BLOCK_SIZE + pixelX] & 0xFF)
+						const uint32_t blockValue = m_gameGrid.GetValue(
+							newPosition.y + blockY * BLOCK_SIZE + pixelY, 
+							newPosition.x + blockX * BLOCK_SIZE + pixelX
+						);
+
+						if (blockValue == INVALID_CELL || blockValue & 0xFF)
 						{
 							return false;
 						}

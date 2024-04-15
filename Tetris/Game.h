@@ -1,12 +1,10 @@
 ﻿#pragma once
 #include <SFML/Window/Event.hpp>
 
+#include "GameGrid.h"
 #include "Tetromino.h"
 
-static constexpr unsigned SCREEN_WIDTH = 800;
-static constexpr unsigned SCREEN_HEIGHT = 600;
 
-static constexpr int CELL_SIZE = 2;
 static constexpr int BLOCK_SIZE = 8;
 
 #define DEBUG_MOVEMENT 0
@@ -25,7 +23,7 @@ public:
 private:
 	int m_nextID;
 	Tetromino* m_currentTetromino;
-	sf::Uint32 m_gameGrid[SCREEN_HEIGHT / CELL_SIZE][SCREEN_WIDTH / CELL_SIZE];
+	GameGrid m_gameGrid;
 
 	bool m_shouldMoveLeft;
 	bool m_shouldMoveRight;
@@ -34,6 +32,7 @@ private:
 
 	float m_movementTimer;
 
+	void UpdateAutomata();
 	void BlitPixels(uint8_t* pixels) const;
 	Tetromino* GenerateTetromino();
 	void RemoveCurrentTetrominoFromGrid();

@@ -128,12 +128,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="GameGrid.cpp" />
     <ClCompile Include="Keyboard.cpp" />
     <ClCompile Include="Tetris.cpp" />
     <ClCompile Include="Tetromino.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game.h" />
+    <ClInclude Include="GameGrid.h" />
     <ClInclude Include="Keyboard.h" />
     <ClInclude Include="Tetromino.h" />
   </ItemGroup>
